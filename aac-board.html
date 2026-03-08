@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Voice Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Baloo 2', cursive;
+  background: #f5f0eb;
+  min-height: 100vh;
+  padding: 14px;
+  background-image: radial-gradient(circle at 20% 20%, #ffe4c4 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, #c8e6ff 0%, transparent 50%);
+}
+
+.speech-bar {
+  background: #fff;
+  border-radius: 22px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
+  border: 2px solid #e8e0d6;
+  min-height: 70px;
+}
+
+#phrase-display {
+  flex: 1;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2d2520;
+  line-height: 1.3;
+}
+#phrase-display.empty { color: #b0a898; font-weight: 500; font-style: italic; font-size: 1rem; }
+
+.bar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.btn-speak {
+  background: linear-gradient(145deg, #ff7043, #f4511e);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 12px 22px;
+  font-family: 'Baloo 2', cursive;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #c33d15, 0 6px 16px rgba(244,81,30,0.35);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-speak:active { transform: translateY(3px); box-shadow: 0 1px 0 #c33d15; }
+.btn-speak:focus-visible { outline: 3px solid #ff7043; outline-offset: 3px; }
+
+.btn-clear {
+  background: #f0ece6;
+  color: #8a7f74;
+  border: 2px solid #e0d8ce;
+  border-radius: 14px;
+  width: 46px; height: 46px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.btn-clear:hover { background: #e8e0d6; }
+.btn-clear:focus-visible { outline: 3px solid #ff7043; outline-offset: 3px; }
+
+.voice-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px 16px;
+  border: 2px solid #e8e0d6;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.voice-row label { font-size: 0.8rem; font-weight: 800; color: #8a7f74; text-transform: uppercase; letter-spacing: 0.5px; }
+select {
+  background: #f5f0eb; border: 2px solid #e0d8ce; border-radius: 10px;
+  padding: 5px 10px; font-family: 'Baloo 2', cursive; font-size: 0.9rem;
+  font-weight: 600; color: #2d2520; cursor: pointer; outline: none; max-width: 180px;
+}
+select:focus { border-color: #ff7043; }
+input[type=range] { accent-color: #ff7043; cursor: pointer; width: 80px; }
+
+.tabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 12px;
+}
+.tab {
+  border: none; cursor: pointer; border-radius: 16px;
+  font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 0.95rem;
+  padding: 12px 6px; text-align: center;
+  transition: transform 0.12s, box-shadow 0.12s;
+  border-bottom: 4px solid transparent;
+}
+.tab:active { transform: translateY(2px); }
+.tab:focus-visible { outline: 3px solid #2d2520; outline-offset: 3px; }
+.tab-needs    { background: #fff3e0; color: #e65100; border-color: #ffb74d; }
+.tab-needs.active    { background: #ff8f00; color: #fff; border-color: #e65100; box-shadow: 0 4px 16px rgba(255,143,0,0.4); }
+.tab-feelings { background: #fce4ec; color: #ad1457; border-color: #f48fb1; }
+.tab-feelings.active { background: #e91e63; color: #fff; border-color: #ad1457; box-shadow: 0 4px 16px rgba(233,30,99,0.4); }
+.tab-yesno    { background: #e8f5e9; color: #1b5e20; border-color: #81c784; }
+.tab-yesno.active    { background: #43a047; color: #fff; border-color: #1b5e20; box-shadow: 0 4px 16px rgba(67,160,71,0.4); }
+
+.board { display: none; }
+.board.visible { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (min-width: 500px) { .board.visible { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 700px) { .board.visible { grid-template-columns: repeat(5, 1fr); } }
+
+.tile {
+  border: none; cursor: pointer; border-radius: 20px;
+  padding: 16px 8px 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px; min-height: 100px;
+  font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 0.88rem;
+  text-align: center; line-height: 1.25;
+  transition: transform 0.12s ease, filter 0.12s ease;
+  border-bottom: 5px solid transparent;
+  opacity: 0;
+  animation: fadeUp 0.3s ease forwards;
+}
+.tile:hover { filter: brightness(1.08); transform: translateY(-2px); }
+.tile:active { transform: scale(0.95) translateY(2px) !important; filter: brightness(0.9) !important; }
+.tile:focus-visible { outline: 3px solid #2d2520; outline-offset: 3px; }
+.tile-emoji { font-size: 2rem; line-height: 1; }
+
+.n1  { background:#ff8f00; color:#fff; border-color:#e65100; }
+.n2  { background:#00897b; color:#fff; border-color:#00695c; }
+.n3  { background:#e53935; color:#fff; border-color:#b71c1c; }
+.n4  { background:#6d4c41; color:#fff; border-color:#4e342e; }
+.n5  { background:#039be5; color:#fff; border-color:#0277bd; }
+.n6  { background:#7cb342; color:#fff; border-color:#558b2f; }
+.n7  { background:#8e24aa; color:#fff; border-color:#6a1b9a; }
+.n8  { background:#f4511e; color:#fff; border-color:#bf360c; }
+.n9  { background:#00acc1; color:#fff; border-color:#00838f; }
+.n10 { background:#fdd835; color:#5d4037; border-color:#f9a825; }
+.n11 { background:#5e35b1; color:#fff; border-color:#4527a0; }
+.n12 { background:#43a047; color:#fff; border-color:#2e7d32; }
+
+.f1  { background:#fdd835; color:#5d4037; border-color:#f9a825; }
+.f2  { background:#1e88e5; color:#fff; border-color:#1565c0; }
+.f3  { background:#fb8c00; color:#fff; border-color:#e65100; }
+.f4  { background:#e53935; color:#fff; border-color:#b71c1c; }
+.f5  { background:#00897b; color:#fff; border-color:#00695c; }
+.f6  { background:#8e24aa; color:#fff; border-color:#6a1b9a; }
+.f7  { background:#6d9f3e; color:#fff; border-color:#4a7a22; }
+.f8  { background:#5e35b1; color:#fff; border-color:#4527a0; }
+.f9  { background:#039be5; color:#fff; border-color:#0277bd; }
+.f10 { background:#e91e63; color:#fff; border-color:#ad1457; }
+.f11 { background:#f4511e; color:#fff; border-color:#bf360c; }
+.f12 { background:#78909c; color:#fff; border-color:#546e7a; }
+
+.y1  { background:#43a047; color:#fff; border-color:#2e7d32; }
+.y2  { background:#e53935; color:#fff; border-color:#b71c1c; }
+.y3  { background:#ff8f00; color:#fff; border-color:#e65100; }
+.y4  { background:#5e35b1; color:#fff; border-color:#4527a0; }
+.y5  { background:#039be5; color:#fff; border-color:#0277bd; }
+.y6  { background:#e91e63; color:#fff; border-color:#ad1457; }
+.y7  { background:#00897b; color:#fff; border-color:#00695c; }
+.y8  { background:#6d4c41; color:#fff; border-color:#4e342e; }
+.y9  { background:#fdd835; color:#5d4037; border-color:#f9a825; }
+.y10 { background:#f4511e; color:#fff; border-color:#bf360c; }
+.y11 { background:#7cb342; color:#fff; border-color:#558b2f; }
+.y12 { background:#1e88e5; color:#fff; border-color:#1565c0; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes speakPulse {
+  0%   { outline: 4px solid rgba(255,112,67,0.9); outline-offset: 2px; }
+  100% { outline: 4px solid rgba(255,112,67,0); outline-offset: 8px; }
+}
+.tile.speaking { animation: fadeUp 0s, speakPulse 0.5s ease-out; opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="speech-bar">
+  <div id="phrase-display" class="empty" aria-live="polite" aria-atomic="true">Tap a tile to load a phrase…</div>
+  <div class="bar-actions">
+    <button class="btn-clear" id="btn-clear" aria-label="Clear">✕</button>
+    <button class="btn-speak" id="btn-speak" aria-label="Speak aloud">▶ Speak</button>
+  </div>
+</div>
+
+<div class="voice-row">
+  <label for="voice-select">Voice</label>
+  <select id="voice-select" aria-label="Select voice"><option>Loading…</option></select>
+  <label for="rate-slider">Speed</label>
+  <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1" aria-label="Speed">
+  <label for="pitch-slider">Pitch</label>
+  <input type="range" id="pitch-slider" min="0.5" max="2" step="0.1" value="1" aria-label="Pitch">
+</div>
+
+<div class="tabs" role="tablist">
+  <button class="tab tab-needs active"    data-tab="needs"    role="tab" aria-selected="true" >🛒 Needs</button>
+  <button class="tab tab-feelings"        data-tab="feelings" role="tab" aria-selected="false">💛 Feelings</button>
+  <button class="tab tab-yesno"           data-tab="yesno"    role="tab" aria-selected="false">✅ Yes / No</button>
+</div>
+
+<div id="board-needs" class="board visible" role="region" aria-label="Basic needs">
+  <button class="tile n1"  data-phrase="I need water"               ><span class="tile-emoji">💧</span>Water</button>
+  <button class="tile n2"  data-phrase="I'm hungry"                 ><span class="tile-emoji">🍽️</span>Hungry</button>
+  <button class="tile n3"  data-phrase="I'm in pain"                ><span class="tile-emoji">🤕</span>Pain</button>
+  <button class="tile n4"  data-phrase="I need to use the bathroom" ><span class="tile-emoji">🚽</span>Bathroom</button>
+  <button class="tile n5"  data-phrase="I need rest"                ><span class="tile-emoji">😴</span>Rest</button>
+  <button class="tile n6"  data-phrase="I'm cold"                   ><span class="tile-emoji">🥶</span>Too cold</button>
+  <button class="tile n7"  data-phrase="I'm too hot"                ><span class="tile-emoji">🥵</span>Too hot</button>
+  <button class="tile n8"  data-phrase="I need medicine"            ><span class="tile-emoji">💊</span>Medicine</button>
+  <button class="tile n9"  data-phrase="I need help right now"      ><span class="tile-emoji">🆘</span>Help!</button>
+  <button class="tile n10" data-phrase="I need a blanket"           ><span class="tile-emoji">🛏️</span>Blanket</button>
+  <button class="tile n11" data-phrase="Can you please be quieter?" ><span class="tile-emoji">🔇</span>Too loud</button>
+  <button class="tile n12" data-phrase="I need fresh air"           ><span class="tile-emoji">🌬️</span>Fresh air</button>
+</div>
+
+<div id="board-feelings" class="board" role="region" aria-label="Feelings">
+  <button class="tile f1"  data-phrase="I feel happy"         ><span class="tile-emoji">😄</span>Happy</button>
+  <button class="tile f2"  data-phrase="I feel sad"           ><span class="tile-emoji">😢</span>Sad</button>
+  <button class="tile f3"  data-phrase="I'm worried"          ><span class="tile-emoji">😰</span>Worried</button>
+  <button class="tile f4"  data-phrase="I'm frustrated"       ><span class="tile-emoji">😤</span>Frustrated</button>
+  <button class="tile f5"  data-phrase="I feel calm"          ><span class="tile-emoji">😌</span>Calm</button>
+  <button class="tile f6"  data-phrase="I'm scared"           ><span class="tile-emoji">😨</span>Scared</button>
+  <button class="tile f7"  data-phrase="I feel tired"         ><span class="tile-emoji">😓</span>Tired</button>
+  <button class="tile f8"  data-phrase="I feel overwhelmed"   ><span class="tile-emoji">🌊</span>Overwhelmed</button>
+  <button class="tile f9"  data-phrase="I'm bored"            ><span class="tile-emoji">😑</span>Bored</button>
+  <button class="tile f10" data-phrase="I feel loved"         ><span class="tile-emoji">🥰</span>Loved</button>
+  <button class="tile f11" data-phrase="I'm in a lot of pain" ><span class="tile-emoji">😖</span>Lots of pain</button>
+  <button class="tile f12" data-phrase="I feel confused"      ><span class="tile-emoji">😕</span>Confused</button>
+</div>
+
+<div id="board-yesno" class="board" role="region" aria-label="Yes, No, and quick responses">
+  <button class="tile y1"  data-phrase="Yes"                          ><span class="tile-emoji">✅</span>Yes</button>
+  <button class="tile y2"  data-phrase="No"                           ><span class="tile-emoji">❌</span>No</button>
+  <button class="tile y3"  data-phrase="Maybe"                        ><span class="tile-emoji">🤔</span>Maybe</button>
+  <button class="tile y4"  data-phrase="I don't know"                 ><span class="tile-emoji">🤷</span>Don't know</button>
+  <button class="tile y5"  data-phrase="Please"                       ><span class="tile-emoji">🙏</span>Please</button>
+  <button class="tile y6"  data-phrase="Thank you"                    ><span class="tile-emoji">💚</span>Thank you</button>
+  <button class="tile y7"  data-phrase="I understand"                 ><span class="tile-emoji">👍</span>I understand</button>
+  <button class="tile y8"  data-phrase="I don't understand"           ><span class="tile-emoji">👎</span>Don't understand</button>
+  <button class="tile y9"  data-phrase="Wait a moment please"         ><span class="tile-emoji">⏳</span>Wait</button>
+  <button class="tile y10" data-phrase="Stop"                         ><span class="tile-emoji">✋</span>Stop</button>
+  <button class="tile y11" data-phrase="More please"                  ><span class="tile-emoji">➕</span>More</button>
+  <button class="tile y12" data-phrase="Can you repeat that please?"  ><span class="tile-emoji">🔁</span>Repeat</button>
+</div>
+
+<script>
+const synth = window.speechSynthesis;
+let voices = [];
+const voiceSel    = document.getElementById('voice-select');
+const rateSlider  = document.getElementById('rate-slider');
+const pitchSlider = document.getElementById('pitch-slider');
+
+function loadVoices() {
+  voices = synth.getVoices();
+  if (!voices.length) return;
+  voiceSel.innerHTML = '';
+  const en = voices.filter(v => v.lang.startsWith('en'));
+  (en.length ? en : voices).forEach(v => {
+    const o = document.createElement('option');
+    o.value = voices.indexOf(v);
+    o.textContent = `${v.name} (${v.lang})`;
+    voiceSel.appendChild(o);
+  });
+}
+synth.onvoiceschanged = loadVoices;
+loadVoices();
+
+function speak(text, tile) {
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const idx = voiceSel.options[voiceSel.selectedIndex]?.value;
+  if (idx != null) u.voice = voices[+idx];
+  u.rate  = parseFloat(rateSlider.value);
+  u.pitch = parseFloat(pitchSlider.value);
+  synth.speak(u);
+  if (tile) {
+    tile.classList.remove('speaking');
+    void tile.offsetWidth;
+    tile.classList.add('speaking');
+    setTimeout(() => tile.classList.remove('speaking'), 500);
+  }
+}
+
+const display  = document.getElementById('phrase-display');
+let current = '';
+let lastTile = null;
+
+function setPhrase(text, tile) {
+  current = text; lastTile = tile;
+  display.textContent = text;
+  display.classList.remove('empty');
+}
+
+document.getElementById('btn-speak').addEventListener('click', () => {
+  if (current) speak(current, lastTile);
+});
+document.getElementById('btn-clear').addEventListener('click', () => {
+  current = ''; lastTile = null;
+  display.textContent = 'Tap a tile to load a phrase…';
+  display.classList.add('empty');
+  synth.cancel();
+});
+
+document.querySelectorAll('.tile[data-phrase]').forEach(tile => {
+  tile.addEventListener('click', () => {
+    if (current === tile.dataset.phrase) {
+      speak(tile.dataset.phrase, tile);
+    } else {
+      setPhrase(tile.dataset.phrase, tile);
+    }
+  });
+});
+
+// Stagger animation helper
+function staggerBoard(boardEl) {
+  boardEl.querySelectorAll('.tile').forEach((t, i) => {
+    t.style.animation = 'none';
+    t.style.opacity = '0';
+    void t.offsetWidth;
+    t.style.animation = `fadeUp 0.28s ease ${i * 0.035}s forwards`;
+  });
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+    tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+    const key = tab.dataset.tab;
+    ['needs','feelings','yesno'].forEach(k => {
+      const b = document.getElementById('board-' + k);
+      const showing = k === key;
+      b.classList.toggle('visible', showing);
+      if (showing) staggerBoard(b);
+    });
+  });
+});
+
+// Initial stagger on load
+staggerBoard(document.getElementById('board-needs'));
+</script>
+</body>
+</html>
